@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,53 +6,53 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 enum Role {
   PATRON
   LIBRARIAN
 }
-model User {
-  id        Int      @id @default(autoincrement()) // primary key, counts 1, 2, 3...
-  email     String   @unique                       // no two users share an email
-  name      String                                 // plain required text
-  role      Role     @default(PATRON)              // uses the enum; defaults to PATRON
-  createdAt DateTime @default(now())               // filled in by the database
-  reviews   Review[]                               // relation field (not a column): one user, many reviews
-}
 
+model User {
+  id        Int      @id @default(autoincrement()) // primary key
+  email     String   @unique                       // unique login email
+  name      String                                 // user's full name
+  password  String                                 // bcrypt hashed password (never plain text!)
+  role      Role     @default(PATRON)              // PATRON or LIBRARIAN
+  createdAt DateTime @default(now())               // creation timestamp
+  reviews   Review[]                               // reviews written by this user
+}
 
 model Genre {
   id    Int    @id @default(autoincrement())
-  name  String @unique // "Mystery" can only exist once
-  books Book[]         // relation field (not a column): one genre, many books
+  name  String @unique // unique genre name, e.g., "Fiction"
+  books Book[]         // one genre has many books
 }
 
 model Book {
   id            Int      @id @default(autoincrement())
   title         String
   author        String
-  publishedYear Int?     // "?" = optional, may be empty (null)
+  isbn          String   @unique                       // unique ISBN identifier
+  totalCopies   Int      @default(1)                   // total copies in library catalog
+  publishedYear Int?                                   // optional published year
 
-  genreId       Int      // FOREIGN KEY: a real column holding the genre's id
+  genreId       Int                                    // foreign key to Genre
   genre         Genre    @relation(fields: [genreId], references: [id])
-  //            ^ relation field (not a column). It says:
-  //              fields:     [genreId] -> the column on THIS table (Book)
-  //              references: [id]      -> the column on the OTHER table (Genre)
-  //              It lets you write book.genre.name in code.
+  reviews       Review[]                               // reviews for this book
 
-  reviews       Review[] // relation field: one book, many reviews
-
-  @@index([genreId])     // speeds up "find all books in genre X"
+  @@index([genreId])                                   // database index for faster lookups
 }
+
 model Review {
   id        Int      @id @default(autoincrement())
-  rating    Int      // for example 1 to 5
-  comment   String?  // optional text
+  rating    Int                                    // rating from 1 to 5
+  comment   String?                                // optional feedback text
   createdAt DateTime @default(now())
 
-  bookId    Int      // foreign key to Book
-  userId    Int      // foreign key to User
+  bookId    Int                                    // foreign key to Book
+  userId    Int                                    // foreign key to User
   book      Book     @relation(fields: [bookId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 
-  @@unique([bookId, userId]) // one review per user per book
+  @@unique([bookId, userId])                       // one review per user per book
 }

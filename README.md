@@ -1,130 +1,156 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Library Management System API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A progressive backend application built with **NestJS**, **TypeScript**, **Prisma ORM**, and **PostgreSQL**. Features full Genre & Book CRUD, dynamic search, multi-factor pagination, bcrypt password hashing, JWT authentication, and role-based authorization (`PATRON` vs `LIBRARIAN`).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📁 Codebase Architecture & Navigation
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+The project is structured modularly following standard NestJS architecture:
 
-## Project setup
-
-```bash
-$ npm install
+```text
+libra/
+├── src/
+│   ├── main.ts                       # Application entry point: Global ValidationPipe & CORS
+│   ├── app.module.ts                 # Root module importing all feature modules
+│   │
+│   ├── auth/                         # Authentication & Security Module
+│   │   ├── auth.controller.ts        # POST /auth/register, POST /auth/login
+│   │   ├── auth.service.ts           # Bcrypt hashing, password validation, JWT signing
+│   │   ├── auth.module.ts            # Configures JwtModule and PassportModule
+│   │   ├── jwt.strategy.ts           # Passport strategy extracting Bearer JWT tokens
+│   │   ├── jwt-auth.guard.ts         # Route guard checking token validity (401 Unauthorized)
+│   │   ├── roles.decorator.ts        # @Roles(Role.LIBRARIAN) metadata decorator
+│   │   ├── roles.guard.ts            # RBAC guard checking req.user.role (403 Forbidden)
+│   │   └── dto/
+│   │       ├── register.dto.ts       # Registration validation (strictly defaults to PATRON)
+│   │       └── login.dto.ts          # Login credential validation
+│   │
+│   ├── books/                        # Books Catalog Module
+│   │   ├── books.controller.ts       # Public GET /books, protected POST/PATCH/DELETE
+│   │   ├── books.service.ts          # Search (title/author), genre filter, skip/take pagination
+│   │   ├── books.module.ts           # Feature module definition
+│   │   └── dto/
+│   │       ├── create-book.dto.ts    # Validates title, author, isbn, totalCopies, genreId
+│   │       └── update-book.dto.ts    # Partial updates validation
+│   │
+│   ├── genres/                       # Genres Module
+│   │   ├── genres.controller.ts      # Full Genre CRUD endpoints
+│   │   ├── genres.service.ts         # Business logic & uniqueness validation
+│   │   ├── genres.module.ts          # Feature module definition
+│   │   └── dto/
+│   │       ├── create-genre.dto.ts   # Validates genre name
+│   │       └── update-genre.dto.ts   # Updates genre name
+│   │
+│   ├── users/                        # Users Module
+│   │   ├── users.controller.ts       # GET /users/profile using @Req()
+│   │   └── users.module.ts           # Feature module definition
+│   │
+│   └── prisma/                       # Database / ORM Layer
+│       ├── prisma.service.ts         # Extends PrismaClient and hooks into onModuleInit()
+│       └── prisma.module.ts          # @Global() module exporting PrismaService
+│
+├── prisma/
+│   ├── schema.prisma                 # Database models: Role, User, Genre, Book, Review
+│   └── seed.ts                       # Seeds 2 users, 4 genres, 16 books with ISBNs & hashes
+│
+├── docs/
+│   └── postman_collection.json       # Complete Postman Collection for all endpoints
+│
+├── .env.example                      # Environment variables template
+└── README.md                         # Project documentation and schema decisions
 ```
 
-## Compile and run the project
+---
 
+## 🚀 API Endpoints Reference
+
+### 1. Authentication (`/auth`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/auth/register` | Public | Register new user (password hashed with bcrypt, role defaults to `PATRON`) |
+| `POST` | `/auth/login` | Public | Verify password and issue a 24h JWT Bearer access token |
+
+### 2. User Profile (`/users`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/users/profile` | Authenticated | Returns the authenticated user's profile (`@Req()`) |
+
+### 3. Genres (`/genres`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/genres` | Public | List all genres |
+| `GET` | `/genres/:id` | Public | Retrieve a single genre by ID (including books) |
+| `POST` | `/genres` | Public | Create a new genre |
+| `PATCH` | `/genres/:id` | Public | Update an existing genre |
+| `DELETE`| `/genres/:id` | Public | Delete a genre |
+
+### 4. Books (`/books`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/books` | Public | List books with query parameters: `?search=...`, `?genreId=...`, `?page=...`, `?limit=...` |
+| `GET` | `/books/:id` | Public | Retrieve a single book with genre and review details |
+| `POST` | `/books` | **LIBRARIAN** | Create a new book (`JwtAuthGuard` + `RolesGuard`) |
+| `PATCH` | `/books/:id` | **LIBRARIAN** | Update book details |
+| `DELETE`| `/books/:id` | **LIBRARIAN** | Delete a book |
+
+---
+
+## 🛠️ Getting Started
+
+### 1. Installation
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
-
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env` and fill in your PostgreSQL credentials and JWT secret:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 3. Database Migration & Seeding
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Push schema to PostgreSQL database
+npx prisma db push
+
+# Seed initial genres, books, and default accounts
+npx prisma db seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Default Seeded Accounts:**
+- **Librarian:** `librarian@example.com` / `password123`
+- **Patron:** `patron@example.com` / `password123`
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-This project is already instrumented. To connect it, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
-
+### 4. Running the Application
 ```bash
-$ npx @nestjs/observe link
+# Development mode with hot-reload
+npm run start:dev
+
+# Production build and run
+npm run build
+npm run start:prod
 ```
 
-It writes the app key and secret into `.env` and makes every `nest start` script (`start`, `start:dev`, `start:debug`) load it. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+### 5. Running Tests & Formatting
+```bash
+# Run unit tests
+npm run test
 
-Or do it by hand: create an application and an API key at [observe.nestjs.com](https://observe.nestjs.com), and set the pair as `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment the app runs in.
+# Format code with Prettier
+npm run format
+```
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+---
 
-## Resources
+## 📬 Postman Collection
 
-Check out a few resources that may come in handy when working with NestJS:
+Import `docs/postman_collection.json` into Postman to instantly test every route:
+1. Run **Login as Librarian** or **Login as Patron**. Postman test scripts will automatically set the `{{librarianToken}}` and `{{patronToken}}` collection variables.
+2. Execute **Create Book (LIBRARIAN Only)** to verify successful creation with a librarian token.
+3. Execute **Forbidden Test: Create Book with Patron Token** to verify that patrons receive `403 Forbidden`.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
+---
 
 ## Schema Decisions
 
